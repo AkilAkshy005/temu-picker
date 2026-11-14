@@ -138,10 +138,12 @@ Rules:
 - Mention real problems people report (quality, safety, shipping, fake photos) in "cons".
 - "proof" lists ids of W/R/Y items that support your judgment. Use only ids that exist.
 - Be short and plain. Each pro/con max 12 words. "why" max 25 words.
+- "searchTerms": 3-6 plain words to search Temu live and find this same kind of product (no brand, no filler).
+- "buyTips": up to 3 short rules (max 14 words each) for picking the best listing in Temu's live results for this request, based on the evidence: what rating/reviews to look for, features to match, things to avoid.
 - "warnings": general cautions for this product type (max 3), only if supported by evidence.
 
 Return JSON exactly like:
-{"summary":"one or two plain sentences","products":[{"id":"T1","name":"short name","price":null,"score":0-100,"verdict":"Buy|Maybe|Skip","confidence":"High|Medium|Low","why":"","pros":[],"cons":[],"proof":["W1"]}],"warnings":[]}
+{"summary":"one or two plain sentences","products":[{"id":"T1","name":"short name","price":null,"score":0-100,"verdict":"Buy|Maybe|Skip","confidence":"High|Medium|Low","why":"","pros":[],"cons":[],"searchTerms":"","proof":["W1"]}],"buyTips":[],"warnings":[]}
 
 EVIDENCE:
 ${JSON.stringify(evidence)}`;
@@ -162,7 +164,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.GEMINI_API_KEY) return json(demo(q));
 
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const cacheKey = new Request("https://cache.local/suggest-v3?q=" + encodeURIComponent(q.toLowerCase()));
+  const cacheKey = new Request("https://cache.local/suggest-v4?q=" + encodeURIComponent(q.toLowerCase()));
   if (cache) {
     const hit = await cache.match(cacheKey);
     if (hit) return new Response(hit.body, hit);
@@ -214,7 +216,7 @@ export async function onRequestPost({ request, env }) {
     .map((p) => ({
       name: clip(p.name, 90) || byId[p.id].title,
       url: byId[p.id].url,
-      searchUrl: searchUrl(clip(p.name, 90) || q),
+      searchUrl: searchUrl(clip(p.searchTerms, 60) || clip(p.name, 60) || q),
       image: isHttp(byId[p.id].image) ? byId[p.id].image : null,
       price: p.price ? clip(String(p.price), 20) : null,
       score: Math.max(0, Math.min(100, Math.round(Number(p.score) || 0))),
@@ -236,6 +238,7 @@ export async function onRequestPost({ request, env }) {
   const result = {
     query: q,
     summary: clip(ai.summary, 300),
+    buyTips: (ai.buyTips || []).slice(0, 3).map((t) => clip(t, 110)),
     warnings: (ai.warnings || []).slice(0, 3).map((s) => clip(s, 160)),
     products,
     liveSearchUrl: searchUrl(q),
