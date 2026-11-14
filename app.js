@@ -30,18 +30,18 @@ function temuAppLink(url) {
   } catch { return null; }
 }
 
-function openLink(url) {
-  const a = el("a", { class: "open", href: url, textContent: "Open in Temu app" });
+function openLink(url, label = "Open in Temu app", cls = "open") {
+  const a = el("a", { class: cls, href: url, textContent: label });
   const app = temuAppLink(url);
   if (app) { a.href = app; a.removeAttribute("target"); }
   return a;
 }
 
-function card(p) {
+function card(p, i) {
   const top = el("div", { class: "top" });
   if (p.image) top.append(el("img", { class: "thumb", src: p.image, alt: "", loading: "lazy", referrerPolicy: "no-referrer" }));
   top.append(
-    el("div", {}, el("h2", { textContent: p.name }), p.price ? el("div", { class: "price", textContent: p.price }) : null),
+    el("div", {}, el("h2", {}, el("span", { class: "rank", textContent: "#" + (i + 1) + " " }), p.name), p.price ? el("div", { class: "price", textContent: p.price }) : null),
     el("div", { class: "score" }, el("b", { textContent: p.score }), el("span", { textContent: "/100" }))
   );
   const meta = el("div", { class: "meta" },
@@ -52,7 +52,8 @@ function card(p) {
   const pc = el("div", { class: "pc" }, list("Good", p.pros), list("Bad", p.cons));
   const proof = el("div", { class: "proof" }, ...p.proof.map((x) => el("a", { href: x.url, textContent: x.source + ": " + x.title })));
   return el("article", { class: "card" }, top, meta, el("p", { class: "why", textContent: p.why }), pc, proof,
-    openLink(p.url));
+    openLink(p.url),
+    openLink(p.searchUrl, "See live on Temu (check stock)", "live"));
 }
 
 function setLoading(on) {
@@ -81,9 +82,10 @@ async function search(q) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Something went wrong.");
     if (d.demo) { $("banner").textContent = "Demo mode: sample data. Add your API keys to get real results."; $("banner").hidden = false; }
-    $("summary").replaceChildren(el("div", { textContent: d.summary || "" }), d.warnings?.length ? el("ul", {}, ...d.warnings.map((w) => el("li", { textContent: w }))) : null);
+    $("summary").replaceChildren(el("div", { textContent: d.summary || "" }), d.products?.length ? el("div", { class: "small", textContent: "Ranked best to worst by how much real review proof backs each product (web, YouTube, Reddit)." }) : null, d.warnings?.length ? el("ul", {}, ...d.warnings.map((w) => el("li", { textContent: w }))) : null);
     $("summary").hidden = !d.summary;
     $("results").replaceChildren(...(d.products || []).map(card));
+    if (d.liveSearchUrl && !(d.products || []).length) $("results").append(el("div", { class: "card" }, el("p", { class: "why", textContent: "No product pages found. Search live on Temu instead." }), openLink(d.liveSearchUrl, "Search live on Temu")));
     const s = Object.entries(d.status || {}).map(([k, v]) => k + (v.ok ? " ✓" : " ✗")).join("  ·  ");
     $("sources").textContent = d.demo ? "" : "Sources: " + s;
     history.replaceState(null, "", "?q=" + encodeURIComponent(q));

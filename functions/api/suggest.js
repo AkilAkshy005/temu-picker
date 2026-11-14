@@ -75,20 +75,21 @@ async function youtube(env, q) {
   return videos;
 }
 
-// Temu product pages look like ...-5030045980709-s.html or ...-g-601099.html
-const PRODUCT_URL = /temu\.com\/.*(-g-\d{6,}|-\d{9,}-s)\.html|goods_id=/i;
+// Real product pages end in ...-g-601099....html. Pages ending in -s.html are old
+// search-landing pages and often show "sold out", so we skip them.
+const PRODUCT_URL = /temu\.com\/.*-g-\d{6,}\.html|goods_id=/i;
+const searchUrl = (name) => "https://www.temu.com/search_result.html?search_key=" + encodeURIComponent(name);
 
 async function temuProducts(env, q) {
   const runs = await Promise.allSettled([
     search(env, `${q} temu`, { domains: ["temu.com"], max: 20, images: true }),
-    search(env, `buy ${q} price reviews temu.com`, { domains: ["temu.com"], max: 20, images: true }),
+    search(env, `${q} - Temu`, { domains: ["temu.com"], max: 20, images: true }),
   ]);
   const all = runs.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
   if (runs.every((r) => r.status === "rejected")) throw runs[0].reason;
   const seen = new Set();
   const uniq = all.filter((x) => !seen.has(x.url) && seen.add(x.url));
-  const products = uniq.filter((x) => PRODUCT_URL.test(x.url));
-  return (products.length >= 3 ? products : uniq).slice(0, 15);
+  return uniq.filter((x) => PRODUCT_URL.test(x.url)).slice(0, 15);
 }
 
 // ---------- Gemini ----------
@@ -182,7 +183,10 @@ export async function onRequestPost({ request, env }) {
 
   const candidates = temu.filter((t) => /temu\.com/i.test(t.url)).map((t, i) => ({ ...t, id: "T" + (i + 1) }));
   if (!candidates.length) {
-    return json({ query: q, products: [], status, summary: "No Temu products found for that. Try different words." });
+    return json({
+      query: q, products: [], status, liveSearchUrl: searchUrl(q),
+      summary: "No live Temu product pages found for that. Try the live Temu search below, or use different words.",
+    });
   }
   const W = web.map((x, i) => ({ ...x, id: "W" + (i + 1) }));
   const R = community.map((x, i) => ({ ...x, id: "R" + (i + 1) }));
@@ -209,6 +213,7 @@ export async function onRequestPost({ request, env }) {
     .map((p) => ({
       name: clip(p.name, 90) || byId[p.id].title,
       url: byId[p.id].url,
+      searchUrl: searchUrl(clip(p.name, 90) || q),
       image: isHttp(byId[p.id].image) ? byId[p.id].image : null,
       price: p.price ? clip(String(p.price), 20) : null,
       score: Math.max(0, Math.min(100, Math.round(Number(p.score) || 0))),
@@ -225,13 +230,14 @@ export async function onRequestPost({ request, env }) {
           url: index[id].url,
         })),
     }))
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => b.score - a.score || b.proof.length - a.proof.length);
 
   const result = {
     query: q,
     summary: clip(ai.summary, 300),
     warnings: (ai.warnings || []).slice(0, 3).map((s) => clip(s, 160)),
     products,
+    liveSearchUrl: searchUrl(q),
     status,
   };
 

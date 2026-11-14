@@ -56,3 +56,5 @@ button{cursor:pointer;font:inherit}
 .small{color:var(--muted);font-size:.8rem}
 footer{padding:20px 0 32px;color:var(--muted);font-size:.8rem;text-align:center}
 [hidden]{display:none!important}
+.rank{color:var(--brand)}
+.live{display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--line);border-radius:12px;color:var(--text);text-decoration:none;font-size:.9rem}
