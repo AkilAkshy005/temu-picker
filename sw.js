@@ -1,5 +1,5 @@
 // Caches the app shell so it opens fast. Never caches API results.
-const CACHE = "temu-picker-v1";
+const CACHE = "temu-picker-v2";
 const SHELL = ["/", "/style.css", "/app.js", "/manifest.webmanifest", "/icon-192.png"];
 self.addEventListener("install", (e) => e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (e) =>

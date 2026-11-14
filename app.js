@@ -61,7 +61,7 @@ async function search(q) {
   $("sources").textContent = "";
   setLoading(true);
   try {
-    const r = await fetch("/api/suggest", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
+    const r = await fetch("/api/suggest", { signal: AbortSignal.timeout(110000), method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ query: q }) });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Something went wrong.");
     if (d.demo) { $("banner").textContent = "Demo mode: sample data. Add your API keys to get real results."; $("banner").hidden = false; }

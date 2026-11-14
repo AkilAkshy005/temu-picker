@@ -17,6 +17,7 @@ const isHttp = (u) => /^https?:\/\//i.test(u || "");
 async function search(env, query, { domains, exclude, max = 8, images = false } = {}) {
   if (!env.TAVILY_API_KEY) throw new Error("Tavily key missing");
   const r = await fetch("https://api.tavily.com/search", {
+    signal: AbortSignal.timeout(15000),
     method: "POST",
     headers: { "content-type": "application/json", authorization: `Bearer ${env.TAVILY_API_KEY}` },
     body: JSON.stringify({
@@ -47,7 +48,8 @@ async function youtube(env, q) {
   const key = env.YOUTUBE_API_KEY;
   const s = await fetch(
     "https://www.googleapis.com/youtube/v3/search?" +
-      new URLSearchParams({ part: "snippet", type: "video", maxResults: 5, q, key, relevanceLanguage: "en" })
+      new URLSearchParams({ part: "snippet", type: "video", maxResults: 5, q, key, relevanceLanguage: "en" }),
+    { signal: AbortSignal.timeout(15000) }
   );
   if (!s.ok) throw new Error(`YouTube ${s.status}`);
   const videos = ((await s.json()).items || []).map((v) => ({
@@ -62,7 +64,8 @@ async function youtube(env, q) {
       try {
         const c = await fetch(
           "https://www.googleapis.com/youtube/v3/commentThreads?" +
-            new URLSearchParams({ part: "snippet", videoId: v.id, maxResults: 8, order: "relevance", textFormat: "plainText", key })
+            new URLSearchParams({ part: "snippet", videoId: v.id, maxResults: 8, order: "relevance", textFormat: "plainText", key }),
+          { signal: AbortSignal.timeout(10000) }
         );
         if (c.ok)
           v.comments = ((await c.json()).items || []).map((i) => clip(i.snippet.topLevelComment.snippet.textDisplay, 200));
@@ -80,7 +83,10 @@ async function gemini(env, prompt) {
   let last = "";
   for (const model of models) {
     for (let attempt = 0; attempt < 2; attempt++) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      let r;
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        signal: AbortSignal.timeout(35000),
         method: "POST",
         headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
         body: JSON.stringify({
@@ -88,6 +94,7 @@ async function gemini(env, prompt) {
           generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
         }),
       });
+      } catch (e) { last = `${model} timed out or failed`; break; }
       if (r.ok) {
         const d = await r.json();
         const text = d.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
