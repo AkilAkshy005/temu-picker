@@ -75,6 +75,22 @@ async function youtube(env, q) {
   return videos;
 }
 
+// Temu product pages look like ...-5030045980709-s.html or ...-g-601099.html
+const PRODUCT_URL = /temu\.com\/.*(-g-\d{6,}|-\d{9,}-s)\.html|goods_id=/i;
+
+async function temuProducts(env, q) {
+  const runs = await Promise.allSettled([
+    search(env, `${q} temu`, { domains: ["temu.com"], max: 20, images: true }),
+    search(env, `buy ${q} price reviews temu.com`, { domains: ["temu.com"], max: 20, images: true }),
+  ]);
+  const all = runs.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
+  if (runs.every((r) => r.status === "rejected")) throw runs[0].reason;
+  const seen = new Set();
+  const uniq = all.filter((x) => !seen.has(x.url) && seen.add(x.url));
+  const products = uniq.filter((x) => PRODUCT_URL.test(x.url));
+  return (products.length >= 3 ? products : uniq).slice(0, 15);
+}
+
 // ---------- Gemini ----------
 
 async function gemini(env, prompt) {
@@ -114,7 +130,7 @@ function buildPrompt(q, evidence) {
 Below is EVIDENCE, each item with an id. Ids starting with T are Temu product pages (candidates). W = web review articles, R = Reddit/Trustpilot, Y = YouTube videos (with top viewer comments).
 
 Rules:
-- Choose up to 6 candidates, ONLY from T items that are really a product matching the request (skip category pages, blogs, search pages).
+- Choose up to 6 candidates, ONLY from T items that are real product pages (skip category pages, blogs, search pages). Pick the CLOSEST matches to the request. If none match exactly, still return the closest ones, and say in "summary" that they are close matches, not exact. Never refuse with a long explanation; keep "summary" to two short sentences.
 - Judge each using only the evidence. Never invent ratings, prices, or facts. If a price or rating is not in the evidence, use null.
 - A product with no outside proof (no W/R/Y item that clearly relates) must get confidence "Low" and score under 55.
 - Mention real problems people report (quality, safety, shipping, fake photos) in "cons".
@@ -158,7 +174,7 @@ export async function onRequestPost({ request, env }) {
     );
 
   const [temu, web, community, yt] = await Promise.all([
-    track("Temu", search(env, `${q} temu`, { domains: ["temu.com"], max: 10, images: true })),
+    track("Temu", temuProducts(env, q)),
     track("Web", search(env, `${q} temu review worth it quality`, { exclude: ["temu.com", "reddit.com", "trustpilot.com", "youtube.com"] })),
     track("Reddit/Trustpilot", search(env, `${q} temu review`, { domains: ["reddit.com", "trustpilot.com"] })),
     track("YouTube", youtube(env, `${q} temu review`)),
