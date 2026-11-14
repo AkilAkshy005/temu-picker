@@ -52,8 +52,8 @@ function card(p, i) {
   const pc = el("div", { class: "pc" }, list("Good", p.pros), list("Bad", p.cons));
   const proof = el("div", { class: "proof" }, ...p.proof.map((x) => el("a", { href: x.url, textContent: x.source + ": " + x.title })));
   return el("article", { class: "card" + (i === 0 ? " best" : "") }, i === 0 ? el("div", { class: "badge", textContent: "Best pick" }) : null, top, meta, el("p", { class: "why", textContent: p.why }), pc, proof,
-    openLink(p.url),
-    openLink(p.searchUrl, "Find it live on Temu (stock is live there)", "live"));
+    openLink(p.searchUrl, "Find it on Temu now (live stock)"),
+    openLink(p.url, "Original listing (may be sold out)", "live"));
 }
 
 function setLoading(on) {
