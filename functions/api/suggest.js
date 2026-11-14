@@ -84,6 +84,7 @@ async function temuProducts(env, q) {
   const runs = await Promise.allSettled([
     search(env, `${q} temu`, { domains: ["temu.com"], max: 20, images: true }),
     search(env, `${q} - Temu`, { domains: ["temu.com"], max: 20, images: true }),
+    search(env, `${q} temu.com product`, { max: 20, exclude: ["reddit.com", "youtube.com", "facebook.com", "instagram.com", "tiktok.com"] }),
   ]);
   const all = runs.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
   if (runs.every((r) => r.status === "rejected")) throw runs[0].reason;

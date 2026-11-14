@@ -85,7 +85,7 @@ async function search(q) {
     $("summary").replaceChildren(el("div", { textContent: d.summary || "" }), d.products?.length ? el("div", { class: "small", textContent: "Ranked best to worst by how much real review proof backs each product (web, YouTube, Reddit)." }) : null, d.warnings?.length ? el("ul", {}, ...d.warnings.map((w) => el("li", { textContent: w }))) : null);
     $("summary").hidden = !d.summary;
     $("results").replaceChildren(...(d.products || []).map(card));
-    if (d.liveSearchUrl && !(d.products || []).length) $("results").append(el("div", { class: "card" }, el("p", { class: "why", textContent: "No product pages found. Search live on Temu instead." }), openLink(d.liveSearchUrl, "Search live on Temu")));
+    if (d.liveSearchUrl) $("results").append(el("div", { class: "card" }, el("p", { class: "why", textContent: (d.products || []).length ? "Want more, or to check stock? Temu's own live search always shows what is available now." : "No product pages found. Search live on Temu instead." }), openLink(d.liveSearchUrl, "Search live on Temu")));
     const s = Object.entries(d.status || {}).map(([k, v]) => k + (v.ok ? " ✓" : " ✗")).join("  ·  ");
     $("sources").textContent = d.demo ? "" : "Sources: " + s;
     history.replaceState(null, "", "?q=" + encodeURIComponent(q));
