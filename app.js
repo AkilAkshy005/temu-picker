@@ -52,7 +52,7 @@ function card(p, i) {
   const pc = el("div", { class: "pc" }, list("Good", p.pros), list("Bad", p.cons));
   const proof = el("div", { class: "proof" }, ...p.proof.map((x) => el("a", { href: x.url, textContent: x.source + ": " + x.title })));
   return el("article", { class: "card" + (i === 0 ? " best" : "") }, i === 0 ? el("div", { class: "badge", textContent: "Best pick" }) : null, top, meta, el("p", { class: "why", textContent: p.why }), pc, proof,
-    openLink(p.searchUrl, "Find it on Temu now (live stock)"),
+    openLink(p.searchUrl, "Open live Temu results"),
     openLink(p.url, "Original listing (may be sold out)", "live"));
 }
 
@@ -82,7 +82,7 @@ async function search(q) {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Something went wrong.");
     if (d.demo) { $("banner").textContent = "Demo mode: sample data. Add your API keys to get real results."; $("banner").hidden = false; }
-    $("summary").replaceChildren(el("div", { textContent: d.summary || "" }), d.products?.length ? el("div", { class: "small", textContent: "Ranked best to worst by how much real review proof backs each product (web, YouTube, Reddit)." }) : null, d.buyTips?.length ? el("div", {}, el("b", { textContent: "How to pick the best one on Temu:" }), el("ul", { class: "tips" }, ...d.buyTips.map((t) => el("li", { textContent: t })))) : null, d.warnings?.length ? el("ul", {}, ...d.warnings.map((w) => el("li", { textContent: w }))) : null);
+    $("summary").replaceChildren(el("div", { textContent: d.summary || "" }), d.products?.length ? el("div", { class: "small", textContent: "Ranked best to worst by how much real review proof backs each product (web, YouTube, Reddit)." }) : null, d.products?.length ? el("div", { class: "rules" }, el("b", { textContent: "On Temu, tap the first result that has:" }), el("ul", { class: "tips" }, ...["Rating 4.5 stars or more", "1,000+ reviews", "5K+ sold", "No \"AD\" label (ads are paid)"].map((t) => el("li", { textContent: t })))) : null, d.buyTips?.length ? el("div", {}, el("b", { textContent: "Also check:" }), el("ul", { class: "tips" }, ...d.buyTips.map((t) => el("li", { textContent: t })))) : null, d.warnings?.length ? el("ul", {}, ...d.warnings.map((w) => el("li", { textContent: w }))) : null);
     $("summary").hidden = !d.summary;
     $("results").replaceChildren(...(d.products || []).map(card));
     if (d.liveSearchUrl) $("results").append(el("div", { class: "card" }, el("p", { class: "why", textContent: (d.products || []).length ? "Want more, or to check stock? Temu's own live search always shows what is available now." : "No product pages found. Search live on Temu instead." }), openLink(d.liveSearchUrl, "Search live on Temu")));

@@ -144,6 +144,7 @@ Below is EVIDENCE, each item with an id. Ids starting with T are Temu product pa
 
 Rules:
 - Choose up to 6 candidates, ONLY from T items that are real product pages (skip category pages, blogs, search pages). Pick the CLOSEST matches to the request. If none match exactly, still return the closest ones, and say in "summary" that they are close matches, not exact. Never refuse with a long explanation; keep "summary" to two short sentences.
+- Every candidate must match ALL key words in the request (gender, colour, material, size, use). A candidate that misses one (for example women's when the request says men) must be left out.
 - Judge each using only the evidence. Never invent ratings, prices, or facts. If a price or rating is not in the evidence, use null.
 - A product with no outside proof (no W/R/Y item that clearly relates) must get confidence "Low" and score under 55.
 - Mention real problems people report (quality, safety, shipping, fake photos) in "cons".
@@ -175,7 +176,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.GEMINI_API_KEY) return json(demo(q));
 
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const cacheKey = new Request("https://cache.local/suggest-v5?q=" + encodeURIComponent(q.toLowerCase()));
+  const cacheKey = new Request("https://cache.local/suggest-v6?q=" + encodeURIComponent(q.toLowerCase()));
   if (cache) {
     const hit = await cache.match(cacheKey);
     if (hit) return new Response(hit.body, hit);
