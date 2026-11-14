@@ -16,5 +16,5 @@ Each search uses 3 Tavily credits, so about 330 searches a month. Results are ca
 No keys = demo mode.
 
 ## Put online free (Cloudflare Pages)
-GitHub → Cloudflare Pages → connect repo → build command empty, output folder `public`.
+GitHub → Cloudflare Pages → connect repo → build command and output folder empty.
 Add the 3 keys under Settings → Variables and Secrets. On phone: open link → Add to Home screen.

@@ -24,8 +24,8 @@ http
       return res.end(await r.text());
     }
     const pathname = req.url.split("?")[0];
-    const file = path.join("public", pathname === "/" ? "index.html" : pathname);
-    if (!file.startsWith("public") || !fs.existsSync(file)) return res.writeHead(404).end("Not found");
+    const file = path.join(".", pathname === "/" ? "index.html" : pathname);
+    if (!types[path.extname(file)] || file.startsWith("functions") || file.startsWith(".") || !fs.existsSync(file)) return res.writeHead(404).end("Not found");
     res.writeHead(200, { "content-type": types[path.extname(file)] || "application/octet-stream" });
     fs.createReadStream(file).pipe(res);
   })

@@ -75,19 +75,30 @@ async function youtube(env, q) {
 // ---------- Gemini ----------
 
 async function gemini(env, prompt) {
-  const model = env.GEMINI_MODEL || "gemini-flash-latest";
-  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
-    body: JSON.stringify({
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
-    }),
-  });
-  if (!r.ok) throw new Error(`Gemini ${r.status}: ${clip(await r.text(), 200)}`);
-  const d = await r.json();
-  const text = d.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
-  return JSON.parse(text);
+  // Gemini is sometimes busy (503). Retry, then fall back to a lighter model.
+  const models = [env.GEMINI_MODEL || "gemini-flash-latest", "gemini-flash-lite-latest"];
+  let last = "";
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-goog-api-key": env.GEMINI_API_KEY },
+        body: JSON.stringify({
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.2 },
+        }),
+      });
+      if (r.ok) {
+        const d = await r.json();
+        const text = d.candidates?.[0]?.content?.parts?.map((p) => p.text).join("") || "";
+        try { return JSON.parse(text); } catch { last = "bad JSON"; continue; }
+      }
+      last = `Gemini ${r.status}: ${clip(await r.text(), 160)}`;
+      if (![429, 500, 503].includes(r.status)) throw new Error(last);
+      await new Promise((res) => setTimeout(res, 1500));
+    }
+  }
+  throw new Error(last);
 }
 
 function buildPrompt(q, evidence) {
