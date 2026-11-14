@@ -78,7 +78,18 @@ async function youtube(env, q) {
 // Real product pages end in ...-g-601099....html. Pages ending in -s.html are old
 // search-landing pages and often show "sold out", so we skip them.
 const PRODUCT_URL = /temu\.com\/.*-g-\d{6,}\.html|goods_id=/i;
-const searchUrl = (name) => "https://www.temu.com/search_result.html?search_key=" + encodeURIComponent(name);
+const searchUrl = (name) => "https://www.temu.com/au/search_result.html?search_key=" + encodeURIComponent(name);
+
+// Force the Australian store: https://www.temu.com/au/... (replaces any other country prefix like /kg-en/)
+function toAustralia(url) {
+  try {
+    const u = new URL(url);
+    u.hostname = "www.temu.com";
+    u.pathname = "/au/" + u.pathname.replace(/^\/(?:[a-z]{2}(?:-[a-z]{2,3})?)\//i, "").replace(/^\//, "");
+    u.search = ""; u.hash = "";
+    return u.toString();
+  } catch { return url; }
+}
 
 async function temuProducts(env, q) {
   const runs = await Promise.allSettled([
@@ -89,7 +100,7 @@ async function temuProducts(env, q) {
   const all = runs.flatMap((r) => (r.status === "fulfilled" ? r.value : []));
   if (runs.every((r) => r.status === "rejected")) throw runs[0].reason;
   const seen = new Set();
-  const uniq = all.filter((x) => !seen.has(x.url) && seen.add(x.url));
+  const uniq = all.map((x) => ({ ...x, url: toAustralia(x.url) })).filter((x) => !seen.has(x.url) && seen.add(x.url));
   return uniq.filter((x) => PRODUCT_URL.test(x.url)).slice(0, 15);
 }
 
@@ -164,7 +175,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.GEMINI_API_KEY) return json(demo(q));
 
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const cacheKey = new Request("https://cache.local/suggest-v4?q=" + encodeURIComponent(q.toLowerCase()));
+  const cacheKey = new Request("https://cache.local/suggest-v5?q=" + encodeURIComponent(q.toLowerCase()));
   if (cache) {
     const hit = await cache.match(cacheKey);
     if (hit) return new Response(hit.body, hit);

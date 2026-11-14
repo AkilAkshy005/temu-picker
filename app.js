@@ -97,6 +97,15 @@ async function search(q) {
   }
 }
 
+$("home").addEventListener("click", (e) => {
+  e.preventDefault();
+  $("q").value = "";
+  for (const id of ["error", "summary", "banner", "loading"]) $(id).hidden = true;
+  $("results").replaceChildren();
+  $("sources").textContent = "";
+  history.replaceState(null, "", "/");
+  scrollTo({ top: 0, behavior: "smooth" });
+});
 $("form").addEventListener("submit", (e) => { e.preventDefault(); search($("q").value); });
 $("chips").replaceChildren(...IDEAS.map((t) => el("button", { type: "button", textContent: t, onclick: () => search(t) })));
 const start = new URLSearchParams(location.search).get("q");
