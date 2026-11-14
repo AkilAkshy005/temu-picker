@@ -162,7 +162,7 @@ export async function onRequestPost({ request, env }) {
   if (!env.GEMINI_API_KEY) return json(demo(q));
 
   const cache = typeof caches !== "undefined" ? caches.default : null;
-  const cacheKey = new Request("https://cache.local/suggest?q=" + encodeURIComponent(q.toLowerCase()));
+  const cacheKey = new Request("https://cache.local/suggest-v3?q=" + encodeURIComponent(q.toLowerCase()));
   if (cache) {
     const hit = await cache.match(cacheKey);
     if (hit) return new Response(hit.body, hit);
