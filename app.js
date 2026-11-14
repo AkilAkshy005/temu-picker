@@ -21,6 +21,22 @@ function list(title, items) {
   return el("div", {}, el("h3", { textContent: title }), el("ul", {}, ...items.map((t) => el("li", { textContent: t }))));
 }
 
+// On Android, open the Temu app if installed; otherwise fall back to the web page.
+function temuAppLink(url) {
+  try {
+    const u = new URL(url);
+    if (!/Android/i.test(navigator.userAgent) || !/(^|\.)temu\.com$/.test(u.hostname)) return null;
+    return `intent://${u.host}${u.pathname}${u.search}#Intent;scheme=https;package=com.einnovation.temu;S.browser_fallback_url=${encodeURIComponent(url)};end`;
+  } catch { return null; }
+}
+
+function openLink(url) {
+  const a = el("a", { class: "open", href: url, textContent: "Open in Temu app" });
+  const app = temuAppLink(url);
+  if (app) { a.href = app; a.removeAttribute("target"); }
+  return a;
+}
+
 function card(p) {
   const top = el("div", { class: "top" });
   if (p.image) top.append(el("img", { class: "thumb", src: p.image, alt: "", loading: "lazy", referrerPolicy: "no-referrer" }));
@@ -36,7 +52,7 @@ function card(p) {
   const pc = el("div", { class: "pc" }, list("Good", p.pros), list("Bad", p.cons));
   const proof = el("div", { class: "proof" }, ...p.proof.map((x) => el("a", { href: x.url, textContent: x.source + ": " + x.title })));
   return el("article", { class: "card" }, top, meta, el("p", { class: "why", textContent: p.why }), pc, proof,
-    el("a", { class: "open", href: p.url, textContent: "Open on Temu" }));
+    openLink(p.url));
 }
 
 function setLoading(on) {
